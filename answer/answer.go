@@ -19,7 +19,7 @@ type Response struct {
 	Page       *int        `json:"page,omitempty"`
 	TotalPages *int        `json:"tatal_pages,omitempty"`
 	TotalItems *int        `json:"total_items,omitempty"`
-	NumItems   *int        `json:"num_items"`
+	NumItems   *int        `json:"num_items,omitempty"`
 }
 
 const success_response = "success"
@@ -31,6 +31,9 @@ func Ok(c Target, payload interface{}) error {
 		Type: success_response,
 		Data: payload,
 	})
+}
+func Message(c Target, message string) error {
+	return c.JSON(http.StatusOK, &Response{Message: message})
 }
 func payloadLen(payload interface{}) int {
 	var vlen = 0
