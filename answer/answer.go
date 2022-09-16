@@ -26,6 +26,11 @@ const success_response = "success"
 const success_message = "success-message"
 const error_message = "error-message"
 
+const SUCCESS = "operacion realizada"
+const CREATED = "registro guardado"
+const DELETED = "registro eliminado"
+const UPDATED = "registro actualizado"
+
 func Ok(c Target, payload interface{}) error {
 	return c.JSON(http.StatusOK, &Response{
 		Type: success_response,
