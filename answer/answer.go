@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/user0608/goones/errs"
 )
@@ -86,7 +87,7 @@ func unwrap(err error) (code int, message string) {
 			return
 		}
 		if we.Wrapped() != nil {
-			log.Println(we.Wrapped().Error())
+			log.Println(strings.TrimSpace(we.Wrapped().Error()))
 			return
 		}
 	}(err, werr)

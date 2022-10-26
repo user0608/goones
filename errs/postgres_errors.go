@@ -3,6 +3,7 @@ package errs
 import (
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/jackc/pgconn"
@@ -16,8 +17,8 @@ type details struct {
 
 var pgErrcodes = map[string]details{
 	"22001": {"verifique que los campos tenga la longitud correcta de caracteres", http.StatusBadRequest, false},
-	"23505": {"registro duplicado", http.StatusBadRequest, false},
-	"23514": {"uno de los campos no tiene el formato correcto, consulte la documentación o al administrador del sistema", http.StatusBadRequest, false},
+	"23505": {"el registro ya existe en la base de datos del sistema", http.StatusBadRequest, false},
+	"23514": {"uno de los campos no tiene el formato correcto, consulte con el administrador del sistema", http.StatusBadRequest, false},
 	"23503": {"se encontró otros registros dependientes, no podemos realizar ninguna acción mientras estas relaciones existan", http.StatusBadRequest, false},
 	"23000": {"operación restringida, problema de integridad en los datos, consulte documentación", http.StatusBadRequest, false},
 	"25000": {"no se pudo completar las operaciones, favor de reporte la incidencia al equipo técnico", http.StatusInternalServerError, true},
@@ -51,6 +52,8 @@ const (
 
 const message23503 = "asociación incompatible, verifique existencia de las identidades relacionadas al registro"
 
+var devmode = os.Getenv("DEV_MODE")
+
 // Pgf Encapsula el error retornado por PostgreSQL y prepara los mensajes,
 // código de error para la respuesta al cliente HTTP, esta respuesta es
 // gestionada por `answer`
@@ -62,7 +65,7 @@ func Pgf(err error) error {
 		}
 		d, ok := pgErrcodes[pgerr.Code]
 		if ok {
-			if d.loggable {
+			if d.loggable || devmode == "1" {
 				return newErrf(err, d.message, d.httcode)
 			}
 			return newErrf(nil, d.message, d.httcode)

@@ -5,11 +5,13 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 var TAG = "chk"
 
 var ErrorKCHECK = errors.New("error unexpected, kcheck")
+var mutex sync.RWMutex
 var funcs = MapFuncs{
 	"uuid":    uuidv4Func,
 	"nonil":   noNilFunc,
@@ -60,7 +62,9 @@ func (ex *paramExtractor) GetTagValue(fieldName string) (value string, ok bool) 
 }
 
 func AddFunc(tagKey string, f ValidFunc) {
+	mutex.RLock()
 	funcs[tagKey] = f
+	mutex.RUnlock()
 }
 func (of *Fields) isContain(field string) bool {
 	for _, v := range *of {
