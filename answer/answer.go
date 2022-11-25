@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"reflect"
 	"strings"
 
 	"github.com/user0608/goones/errs"
@@ -14,17 +13,17 @@ type Target interface {
 	JSON(code int, i interface{}) error
 }
 type Response struct {
-	Type       string      `json:"type,omitempty"` //error-response, success-response
-	Message    string      `json:"message,omitempty"`
-	Data       interface{} `json:"data,omitempty"`
-	Page       *int        `json:"page,omitempty"`
-	TotalPages *int        `json:"tatal_pages,omitempty"`
-	TotalItems *int        `json:"total_items,omitempty"`
-	NumItems   *int        `json:"num_items,omitempty"`
+	Type           string      `json:"type,omitempty"` //error-response, success-response
+	Message        string      `json:"message,omitempty"`
+	Data           interface{} `json:"data,omitempty"`
+	ReturnedItems  *int        `json:"returned_items,omitempty"`
+	RequestedItems *int        `json:"requested_items,omitempty"`
+	CurrentPage    *int        `json:"current_page,omitempty"`
+	NumberPages    *int        `json:"number_pages,omitempty"`
+	NumberItems    *int        `json:"items,omitempty"`
 }
 
 const success_response = "success"
-const success_message = "success-message"
 const error_message = "error-message"
 
 const SUCCESS = "operacion realizada"
@@ -41,26 +40,24 @@ func Ok(c Target, payload interface{}) error {
 func Message(c Target, message string) error {
 	return c.JSON(http.StatusOK, &Response{Message: message})
 }
-func payloadLen(payload interface{}) int {
-	var vlen = 0
-	switch reflect.TypeOf(payload).Kind() {
-	case reflect.Slice:
-		vlen = reflect.ValueOf(payload).Len()
-	}
-	return vlen
-}
-func OkPage(c Target, payload interface{}, page, totalPages, totalItems int) error {
-	var numItems = payloadLen(payload)
+
+func OkPage(c Target, p Pager) error {
+	var currentpage = p.CurrentPage()
+	var numberitems = p.NumberItems()
+	var numberpages = p.NumberPages()
+	var requestedItems = p.RequestedItems()
+	var returntedItems = p.ReturnedItems()
 	return c.JSON(http.StatusOK, &Response{
-		Type:       success_response,
-		Data:       payload,
-		Page:       &page,
-		TotalPages: &totalPages,
-		TotalItems: &totalItems,
-		NumItems:   &numItems,
+		Type:           success_response,
+		Data:           p.Data(),
+		NumberPages:    &numberpages,
+		ReturnedItems:  &returntedItems,
+		RequestedItems: &requestedItems,
+		CurrentPage:    &currentpage,
+		NumberItems:    &numberitems,
 	})
 }
-func NewOK(payload interface{}) Response {
+func NewOK(payload any) Response {
 	return Response{
 		Type: success_response,
 		Data: payload,
@@ -69,7 +66,7 @@ func NewOK(payload interface{}) Response {
 
 func NewSms(message string) Response {
 	return Response{
-		Type:    success_message,
+		Type:    success_response,
 		Message: message,
 	}
 }
@@ -97,9 +94,13 @@ func Err(c Target, err error) error {
 	code, message := unwrap(err)
 	return c.JSON(code, &Response{Type: error_message, Message: message})
 }
-func Error(err error) Response {
+func Error(err error, payload ...any) Response {
 	_, message := unwrap(err)
-	return Response{Type: error_message, Message: message}
+	var data any
+	if len(payload) > 0 {
+		data = payload[0]
+	}
+	return Response{Type: error_message, Message: message, Data: data}
 }
 
 func JsonErr(c Target) error {

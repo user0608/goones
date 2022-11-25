@@ -44,6 +44,7 @@ const (
 	ErrUpdatingError         = "no se puedo realizar la operacion de actualización"
 	ErrUserOrPasswordInvalid = "el usuario o contraseña son incorrectos"
 	ErrIDNotFound            = "parametro id o identificador no encontrado"
+	ErrCodeNotFound          = "parametro codigo no encontrado"
 	ErrNameNotFound          = "parametro name no encontrado"
 	ErrNotFound              = "No se pudo encontrar ningún recurso asociado a esta consulta"
 
