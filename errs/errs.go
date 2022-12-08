@@ -1,8 +1,10 @@
 package errs
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type Err struct {
@@ -34,6 +36,15 @@ func newErrf(err error, message string, httpcode int) error {
 		message:  message,
 		httpcode: httpcode,
 	}
+}
+
+// Contains revisa el mensaje
+func ContainsMessage(err error, message string) bool {
+	var myerr *Err
+	if errors.As(err, &myerr) {
+		return strings.Contains(myerr.message, message)
+	}
+	return false
 }
 
 func BadReqf(err error, format string, a ...interface{}) error {

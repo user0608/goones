@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/jackc/pgconn"
 )
@@ -15,6 +16,7 @@ type details struct {
 	loggable bool
 }
 
+var mutex sync.RWMutex
 var pgErrcodes = map[string]details{
 	"22001": {"verifique que los campos tenga la longitud correcta de caracteres", http.StatusBadRequest, false},
 	"23505": {"el registro ya existe en la base de datos del sistema", http.StatusBadRequest, false},
@@ -31,6 +33,12 @@ var pgErrcodes = map[string]details{
 	"23502": {"hay campos que no deberían de ser nullables, consulte la documentación o al administrador del sistema", http.StatusBadRequest, false},
 }
 
+func AddPgErrs(pgerrcode, message string, httpcode int, loggable bool) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	pgErrcodes[pgerrcode] = details{message, httpcode, loggable}
+}
+
 const (
 	ErrInvalidRequestBody          = "la estructura de información enviada es inválida, revisar la documentación y volver a intentar"
 	ErrInvalidQueryParam           = "los parámetros de consulta son inválidos, favor de revisar la documentación y volver a intentar"
@@ -39,21 +47,23 @@ const (
 	ErrSigningTokenString          = "el token que está utilizando no es genuino, contáctese con el equipo técnico"
 	ErrDatabase                    = "la operacion no se pudo realizar de bebido a algún problema, contáctese con el equipo técnico"
 
-	ErrRecordNotFaund        = "el registro que está buscando no fue encontrado en el sistema"
-	ErrCreatingError         = "no se puedo realizar la operacion de registro"
-	ErrUpdatingError         = "no se puedo realizar la operacion de actualización"
-	ErrUserOrPasswordInvalid = "el usuario o contraseña son incorrectos"
-	ErrIDNotFound            = "parametro id o identificador no encontrado"
-	ErrCodeNotFound          = "parametro codigo no encontrado"
+	ErrRecordNotFaund        = "el registro buscando no fue encontrado"
+	ErrCreating              = "no se puedo realizar la operacion de registro"
+	ErrUpdating              = "no se puedo realizar la operacion de actualización"
+	ErrUserOrPasswordInvalid = "usuario o contraseña son incorrectos"
+	ErrIDNotFound            = "parametro ID o identificador no encontrado"
+	ErrCodeNotFound          = "parametro codigo no fue encontrado"
 	ErrNameNotFound          = "parametro name no encontrado"
 	ErrNotFound              = "No se pudo encontrar ningún recurso asociado a esta consulta"
-
-	ErrGeneric = "hubo un error, no esperado, favor de reporte la incidencia al equipo técnico"
+	ErrGeneric               = "hubo un error, no esperado, favor de reporte la incidencia al equipo técnico"
+	ErrInternal              = ErrGeneric
 )
 
 const message23503 = "asociación incompatible, verifique existencia de las identidades relacionadas al registro"
 
 var devmode = os.Getenv("DEV_MODE")
+
+func Devmode() { devmode = "1" }
 
 // Pgf Encapsula el error retornado por PostgreSQL y prepara los mensajes,
 // código de error para la respuesta al cliente HTTP, esta respuesta es
