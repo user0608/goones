@@ -48,7 +48,7 @@ func decimalFunc(atom Atom, _ string) error {
 	return fmt.Errorf(message, atom.Value, atom.Name)
 }
 func sword(atom Atom, _ string) error {
-	valid, err := regexp.MatchString("^[0-9a-zA-Z_ñ]*$", atom.Value)
+	valid, err := regexp.MatchString("^[A-Za-z_][A-Za-z\\d_]*$", atom.Value)
 	if err != nil {
 		log.Printf("ERROR: kcheck.sword: %v\n", err)
 		return ErrorKCHECK
