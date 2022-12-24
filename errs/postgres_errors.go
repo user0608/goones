@@ -54,12 +54,12 @@ const (
 	ErrIDNotFound            = "parametro ID o identificador no encontrado"
 	ErrCodeNotFound          = "parametro codigo no fue encontrado"
 	ErrNameNotFound          = "parametro name no encontrado"
-	ErrNotFound              = "No se pudo encontrar ningún recurso asociado a esta consulta"
+	ErrNotFound              = "no se pudo encontrar ningún recurso asociado a esta consulta"
 	ErrGeneric               = "hubo un error, no esperado, favor de reporte la incidencia al equipo técnico"
 	ErrInternal              = ErrGeneric
 )
 
-const message23503 = "asociación incompatible, verifique existencia de las identidades relacionadas al registro"
+const message23503 = "asociación incompatible, verifique la existencia de las identidades relacionadas al registro"
 
 var devmode = os.Getenv("DEV_MODE")
 
