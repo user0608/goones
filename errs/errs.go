@@ -47,6 +47,18 @@ func ContainsMessage(err error, message string) bool {
 	return false
 }
 
+// NewWithMessage if err isn't errs.Err, bad request is by default
+func NewWithMessage(err error, message string) error {
+	var myerr *Err
+	if errors.As(err, &myerr) {
+		return &Err{
+			httpcode: myerr.httpcode,
+			wrapped:  myerr.wrapped,
+			message:  message,
+		}
+	}
+	return BadReqf(err, message)
+}
 func BadReqf(err error, format string, a ...interface{}) error {
 	return newErrf(err, fmt.Sprintf(format, a...), http.StatusBadRequest)
 }
