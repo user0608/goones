@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type details struct {
@@ -25,7 +25,7 @@ var pgErrcodes = map[string]details{
 	"23000": {"operación restringida, problema de integridad en los datos, consulte documentación", http.StatusBadRequest, false},
 	"25000": {"no se pudo completar las operaciones, favor de reporte la incidencia al equipo técnico", http.StatusInternalServerError, true},
 	"26000": {"hubo un problema interno, favor de reporte la incidencia al equipo técnico", http.StatusInternalServerError, true},
-	"28000": {"Acceso restringido, no podemos realizar la operación", http.StatusUnauthorized, true},
+	"28000": {"acceso restringido, no podemos realizar la operación", http.StatusUnauthorized, true},
 	"2D000": {"hubo un problema al realizar la transacción, favor de reporte la incidencia al equipo técnico", http.StatusInternalServerError, true},
 	"42P01": {"el registro o recurso al que intenta acceder, no existe", http.StatusBadRequest, false},
 	"22P02": {"el formato o representación de uno de los valores de campo no cumple con los requerimientos", http.StatusBadRequest, false},
@@ -47,7 +47,7 @@ const (
 	ErrSigningTokenString          = "el token que está utilizando no es genuino, contáctese con el equipo técnico"
 	ErrDatabase                    = "la operacion no se pudo realizar de bebido a algún problema, contáctese con el equipo técnico"
 
-	ErrRecordNotFaund        = "el registro buscando no fue encontrado"
+	ErrRecordNotFaund        = "el registro buscado no fue encontrado"
 	ErrCreating              = "no se puedo realizar la operacion de registro"
 	ErrUpdating              = "no se puedo realizar la operacion de actualización"
 	ErrUserOrPasswordInvalid = "usuario o contraseña son incorrectos"
