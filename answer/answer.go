@@ -108,3 +108,10 @@ func JsonErr(c Target) error {
 func QueryErr(c Target) error {
 	return Err(c, errs.Bad(errs.ErrInvalidQueryParam))
 }
+
+func Auto(c Target, err error) error {
+	if err != nil {
+		return Err(c, err)
+	}
+	return Success(c)
+}
