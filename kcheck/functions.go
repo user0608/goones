@@ -32,7 +32,7 @@ func numberFunc(atom Atom, _ string) error {
 	if valid {
 		return nil
 	}
-	const message = "todos los caracteres del campo [%s] deben ser numéricos, valor [%s] es invalido"
+	const message = "todos los caracteres del campo [%s] deben ser numéricos,el valor [%s] es invalido"
 	return fmt.Errorf(message, atom.Value, atom.Name)
 }
 func decimalFunc(atom Atom, _ string) error {

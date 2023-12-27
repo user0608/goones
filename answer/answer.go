@@ -26,10 +26,10 @@ type Response struct {
 const success_response = "success"
 const error_message = "error-message"
 
-const SUCCESS = "operacion realizada"
-const CREATED = "registro guardado"
-const DELETED = "registro eliminado"
-const UPDATED = "registro actualizado"
+const SUCCESS = "Operación completada exitosamente."
+const CREATED = "Registro guardado con éxito."
+const DELETED = "Registro eliminado correctamente."
+const UPDATED = "Registro actualizado con éxito."
 
 func Ok(c Target, payload interface{}) error {
 	return c.JSON(http.StatusOK, &Response{
@@ -37,9 +37,18 @@ func Ok(c Target, payload interface{}) error {
 		Data: payload,
 	})
 }
+
 func Message(c Target, message string) error {
 	return c.JSON(http.StatusOK, &Response{Message: message})
 }
+
+func Success(c Target) error { return c.JSON(http.StatusOK, &Response{Message: SUCCESS}) }
+
+func SuccessCreated(c Target) error { return c.JSON(http.StatusCreated, &Response{Message: CREATED}) }
+
+func SuccessUpdated(c Target) error { return c.JSON(http.StatusOK, &Response{Message: UPDATED}) }
+
+func SuccessDeleted(c Target) error { return c.JSON(http.StatusOK, &Response{Message: DELETED}) }
 
 func OkPage(c Target, p Pager) error {
 	var currentpage = p.CurrentPage()
@@ -57,55 +66,45 @@ func OkPage(c Target, p Pager) error {
 		NumberItems:    &numberitems,
 	})
 }
-func NewOK(payload any) Response {
-	return Response{
-		Type: success_response,
-		Data: payload,
-	}
-}
 
-func NewSms(message string) Response {
-	return Response{
-		Type:    success_response,
-		Message: message,
-	}
-}
 func unwrap(err error) (code int, message string) {
 	var werr *errs.Err
-	code = 400
-	message = "algo paso, hubo un error no esperado"
+	code = http.StatusInternalServerError
+	message = "Ocurrió un problema. Se produjo un error inesperado."
 	if errors.As(err, &werr) {
 		code = werr.Code()
 		message = werr.Message()
 	}
-	go func(e error, we *errs.Err) {
-		if we == nil {
-			log.Println(e.Error())
+	if werr == nil && err != nil {
+		var errSMS = strings.TrimSpace(err.Error())
+		if strings.HasPrefix(":", errSMS) {
+			code = http.StatusBadRequest
+			message = strings.TrimLeft(errSMS, ":")
+			return
+		}
+	}
+	go func(err error, we *errs.Err) {
+		if we == nil && err != nil {
+			log.Println("ERR:", err.Error())
 			return
 		}
 		if we.Wrapped() != nil {
-			log.Println(strings.TrimSpace(we.Wrapped().Error()))
+			log.Println("ERR:", strings.TrimSpace(we.Wrapped().Error()))
 			return
 		}
 	}(err, werr)
 	return code, message
 }
+
 func Err(c Target, err error) error {
 	code, message := unwrap(err)
 	return c.JSON(code, &Response{Type: error_message, Message: message})
-}
-func Error(err error, payload ...any) Response {
-	_, message := unwrap(err)
-	var data any
-	if len(payload) > 0 {
-		data = payload[0]
-	}
-	return Response{Type: error_message, Message: message, Data: data}
 }
 
 func JsonErr(c Target) error {
 	return Err(c, errs.Bad(errs.ErrInvalidRequestBody))
 }
+
 func QueryErr(c Target) error {
 	return Err(c, errs.Bad(errs.ErrInvalidQueryParam))
 }
