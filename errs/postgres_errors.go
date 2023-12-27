@@ -18,20 +18,36 @@ type details struct {
 
 var mutex sync.RWMutex
 
+const (
+	Pg_InvalidLengthError       = "22001"
+	Pg_DuplicateRecordError     = "23505"
+	Pg_InvalidFormatError       = "23514"
+	Pg_DependentRecordsError    = "23503"
+	Pg_DataIntegrityError       = "23000"
+	Pg_OperationFailedError     = "25000"
+	Pg_InternalProblemError     = "26000"
+	Pg_UnauthorizedAccessError  = "28000"
+	Pg_TransactionError         = "2D000"
+	Pg_NonexistentResourceError = "42P01"
+	Pg_InvalidFieldValueError   = "22P02"
+	Pg_InvalidJSONValueError    = "22032"
+	Pg_NonNullableFieldsError   = "23502"
+)
+
 var pgErrcodes = map[string]details{
-	"22001": {"Verifique que los campos tengan la longitud correcta de caracteres.", http.StatusBadRequest, false},
-	"23505": {"El registro ya existe en la base de datos del sistema.", http.StatusBadRequest, false},
-	"23514": {"Uno de los campos no tiene el formato correcto. Consulte con el administrador del sistema.", http.StatusBadRequest, false},
-	"23503": {"Se encontraron otros registros dependientes. No podemos realizar ninguna acción mientras estas relaciones existan.", http.StatusBadRequest, false},
-	"23000": {"Operación restringida debido a un problema de integridad en los datos. Consulte la documentación.", http.StatusBadRequest, false},
-	"25000": {"No se pudieron completar las operaciones. Por favor, informe la incidencia al equipo técnico.", http.StatusInternalServerError, true},
-	"26000": {"Hubo un problema interno. Por favor, informe la incidencia al equipo técnico.", http.StatusInternalServerError, true},
-	"28000": {"Acceso restringido. No podemos realizar la operación.", http.StatusUnauthorized, true},
-	"2D000": {"Hubo un problema al realizar la transacción. Por favor, informe la incidencia al equipo técnico.", http.StatusInternalServerError, true},
-	"42P01": {"El registro o recurso al que intenta acceder no existe.", http.StatusBadRequest, false},
-	"22P02": {"El formato o representación de uno de los valores de campo no cumple con los requerimientos.", http.StatusBadRequest, false},
-	"22032": {"El valor asignado a uno de los campos de tipo JSON no cumple con los requerimientos.", http.StatusBadRequest, false},
-	"23502": {"Hay campos que no deberían ser nulos. Consulte la documentación o al administrador del sistema.", http.StatusBadRequest, false},
+	Pg_InvalidLengthError:       {"Verifique que los campos tengan la longitud correcta de caracteres.", http.StatusBadRequest, false},
+	Pg_DuplicateRecordError:     {"El registro ya existe en la base de datos del sistema.", http.StatusBadRequest, false},
+	Pg_InvalidFormatError:       {"Uno de los campos no tiene el formato correcto. Consulte con el administrador del sistema.", http.StatusBadRequest, false},
+	Pg_DependentRecordsError:    {"Se encontraron otros registros dependientes. No podemos realizar ninguna acción mientras estas relaciones existan.", http.StatusBadRequest, false},
+	Pg_DataIntegrityError:       {"Operación restringida debido a un problema de integridad en los datos. Consulte la documentación.", http.StatusBadRequest, false},
+	Pg_OperationFailedError:     {"No se pudieron completar las operaciones. Por favor, informe la incidencia al equipo técnico.", http.StatusInternalServerError, true},
+	Pg_InternalProblemError:     {"Hubo un problema interno. Por favor, informe la incidencia al equipo técnico.", http.StatusInternalServerError, true},
+	Pg_UnauthorizedAccessError:  {"Acceso restringido. No podemos realizar la operación.", http.StatusUnauthorized, true},
+	Pg_TransactionError:         {"Hubo un problema al realizar la transacción. Por favor, informe la incidencia al equipo técnico.", http.StatusInternalServerError, true},
+	Pg_NonexistentResourceError: {"El registro o recurso al que intenta acceder no existe.", http.StatusBadRequest, false},
+	Pg_InvalidFieldValueError:   {"El formato o representación de uno de los valores de campo no cumple con los requerimientos.", http.StatusBadRequest, false},
+	Pg_InvalidJSONValueError:    {"El valor asignado a uno de los campos de tipo JSON no cumple con los requerimientos.", http.StatusBadRequest, false},
+	Pg_NonNullableFieldsError:   {"Hay campos que no deberían ser nulos. Consulte la documentación o al administrador del sistema.", http.StatusBadRequest, false},
 }
 
 func AddPgErrs(pgerrcode, message string, httpcode int, loggable bool) {
@@ -59,6 +75,7 @@ const (
 	ErrGeneric               = "Hubo un error inesperado. Favor de reportar la incidencia al equipo técnico."
 	ErrInternal              = ErrGeneric
 )
+
 const message23503 = "No se puede realizar la operación debido a asociaciones incompatibles. Asegúrese de que los valores relacionados existan antes de intentar el registro."
 
 var devmode = os.Getenv("DEV_MODE")
