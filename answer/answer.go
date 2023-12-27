@@ -44,11 +44,11 @@ func Message(c Target, message string) error {
 
 func Success(c Target) error { return c.JSON(http.StatusOK, &Response{Message: SUCCESS}) }
 
-func SuccessCreated(c Target) error { return c.JSON(http.StatusCreated, &Response{Message: CREATED}) }
+func Created(c Target) error { return c.JSON(http.StatusCreated, &Response{Message: CREATED}) }
 
-func SuccessUpdated(c Target) error { return c.JSON(http.StatusOK, &Response{Message: UPDATED}) }
+func Updated(c Target) error { return c.JSON(http.StatusOK, &Response{Message: UPDATED}) }
 
-func SuccessDeleted(c Target) error { return c.JSON(http.StatusOK, &Response{Message: DELETED}) }
+func Deleted(c Target) error { return c.JSON(http.StatusOK, &Response{Message: DELETED}) }
 
 func OkPage(c Target, p Pager) error {
 	var currentpage = p.CurrentPage()

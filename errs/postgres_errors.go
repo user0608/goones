@@ -88,6 +88,9 @@ func Devmode() { devmode = "1" }
 // código de error para la respuesta al cliente HTTP, esta respuesta es
 // gestionada por `answer`
 func Pgf(err error) error {
+	if err == nil {
+		return nil
+	}
 	var pgerr *pgconn.PgError
 	if errors.As(err, &pgerr) {
 		if pgerr.Code == "23503" && strings.Contains(pgerr.Message, "insert or update") {
