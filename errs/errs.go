@@ -59,30 +59,39 @@ func NewWithMessage(err error, message string) error {
 	}
 	return BadReqf(err, message)
 }
+
 func BadReqf(err error, format string, a ...interface{}) error {
 	return newErrf(err, fmt.Sprintf(format, a...), http.StatusBadRequest)
 }
+
 func Notfoundf(err error, format string, a ...interface{}) error {
 	return newErrf(err, fmt.Sprintf(format, a...), http.StatusForbidden)
 }
+
 func Internalf(err error, format string, a ...interface{}) error {
 	return newErrf(err, fmt.Sprintf(format, a...), http.StatusInternalServerError)
 }
+
 func Unsupportedf(err error, format string, a ...interface{}) error {
 	return newErrf(err, fmt.Sprintf(format, a...), http.StatusUnsupportedMediaType)
 }
+
 func Unauthorizedf(err error, format string, a ...interface{}) error {
 	return newErrf(err, fmt.Sprintf(format, a...), http.StatusUnauthorized)
 }
+
 func Forbibbenf(err error, format string, a ...interface{}) error {
 	return newErrf(err, fmt.Sprintf(format, a...), http.StatusForbidden)
 }
+
 func Bad(format string, a ...interface{}) error {
 	return newErrf(nil, fmt.Sprintf(format, a...), http.StatusBadRequest)
 }
+
 func NF(format string, a ...interface{}) error {
 	return newErrf(nil, fmt.Sprintf(format, a...), http.StatusNotFound)
 }
+
 func Internal(format string, a ...interface{}) error {
 	return newErrf(nil, fmt.Sprintf(format, a...), http.StatusInternalServerError)
 }

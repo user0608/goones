@@ -18,23 +18,25 @@ type details struct {
 
 var mutex sync.RWMutex
 
+type PGCode string
+
 const (
-	Pg_InvalidLengthError       = "22001"
-	Pg_DuplicateRecordError     = "23505"
-	Pg_InvalidFormatError       = "23514"
-	Pg_DependentRecordsError    = "23503"
-	Pg_DataIntegrityError       = "23000"
-	Pg_OperationFailedError     = "25000"
-	Pg_InternalProblemError     = "26000"
-	Pg_UnauthorizedAccessError  = "28000"
-	Pg_TransactionError         = "2D000"
-	Pg_NonexistentResourceError = "42P01"
-	Pg_InvalidFieldValueError   = "22P02"
-	Pg_InvalidJSONValueError    = "22032"
-	Pg_NonNullableFieldsError   = "23502"
+	Pg_InvalidLengthError       = PGCode("22001")
+	Pg_DuplicateRecordError     = PGCode("23505")
+	Pg_InvalidFormatError       = PGCode("23514")
+	Pg_DependentRecordsError    = PGCode("23503")
+	Pg_DataIntegrityError       = PGCode("23000")
+	Pg_OperationFailedError     = PGCode("25000")
+	Pg_InternalProblemError     = PGCode("26000")
+	Pg_UnauthorizedAccessError  = PGCode("28000")
+	Pg_TransactionError         = PGCode("2D000")
+	Pg_NonexistentResourceError = PGCode("42P01")
+	Pg_InvalidFieldValueError   = PGCode("22P02")
+	Pg_InvalidJSONValueError    = PGCode("22032")
+	Pg_NonNullableFieldsError   = PGCode("23502")
 )
 
-var pgErrcodes = map[string]details{
+var pgErrcodes = map[PGCode]details{
 	Pg_InvalidLengthError:       {"Verifique que los campos tengan la longitud correcta de caracteres.", http.StatusBadRequest, false},
 	Pg_DuplicateRecordError:     {"El registro ya existe en la base de datos del sistema.", http.StatusBadRequest, false},
 	Pg_InvalidFormatError:       {"Uno de los campos no tiene el formato correcto. Consulte con el administrador del sistema.", http.StatusBadRequest, false},
@@ -50,7 +52,7 @@ var pgErrcodes = map[string]details{
 	Pg_NonNullableFieldsError:   {"Hay campos que no deberían ser nulos. Consulte la documentación o al administrador del sistema.", http.StatusBadRequest, false},
 }
 
-func AddPgErrs(pgerrcode, message string, httpcode int, loggable bool) {
+func AddPgErrs(pgerrcode PGCode, message string, httpcode int, loggable bool) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	pgErrcodes[pgerrcode] = details{message, httpcode, loggable}
@@ -93,7 +95,7 @@ func Pgf(err error) error {
 		}
 		mutex.RLock()
 		defer mutex.RUnlock()
-		state, ok := pgErrcodes[pgerr.Code]
+		state, ok := pgErrcodes[PGCode(pgerr.Code)]
 		if ok {
 			if state.loggable || devmode == "1" {
 				return newErrf(err, state.message, state.httcode)
@@ -102,4 +104,12 @@ func Pgf(err error) error {
 		}
 	}
 	return newErrf(err, ErrDatabase, http.StatusInternalServerError)
+}
+
+func IsPgErrCode(err error, code PGCode) bool {
+	var pgerr *pgconn.PgError
+	if errors.As(err, &pgerr) {
+		return PGCode(pgerr.Code) == code
+	}
+	return false
 }
