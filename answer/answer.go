@@ -98,3 +98,9 @@ func Auto(c Target, err error) error {
 	}
 	return Success(c)
 }
+func AutoOK(c Target, data, err error) error {
+	if err != nil {
+		return Err(c, err)
+	}
+	return Ok(c, data)
+}
