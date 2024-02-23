@@ -50,23 +50,6 @@ func Updated(c Target) error { return c.JSON(http.StatusOK, &Response{Message: U
 
 func Deleted(c Target) error { return c.JSON(http.StatusOK, &Response{Message: DELETED}) }
 
-func OkPage(c Target, p Pager) error {
-	var currentpage = p.CurrentPage()
-	var numberitems = p.NumberItems()
-	var numberpages = p.NumberPages()
-	var requestedItems = p.RequestedItems()
-	var returntedItems = p.ReturnedItems()
-	return c.JSON(http.StatusOK, &Response{
-		Type:           success_response,
-		Data:           p.Data(),
-		NumberPages:    &numberpages,
-		ReturnedItems:  &returntedItems,
-		RequestedItems: &requestedItems,
-		CurrentPage:    &currentpage,
-		NumberItems:    &numberitems,
-	})
-}
-
 func unwrap(err error) (code int, message string) {
 	var werr *errs.Err
 	code = http.StatusInternalServerError
