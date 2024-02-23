@@ -2,7 +2,7 @@ package answer
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -13,23 +13,26 @@ type Target interface {
 	JSON(code int, i interface{}) error
 }
 type Response struct {
-	Type           string      `json:"type,omitempty"` //error-response, success-response
-	Message        string      `json:"message,omitempty"`
-	Data           interface{} `json:"data,omitempty"`
-	ReturnedItems  *int        `json:"returned_items,omitempty"`
-	RequestedItems *int        `json:"requested_items,omitempty"`
-	CurrentPage    *int        `json:"current_page,omitempty"`
-	NumberPages    *int        `json:"number_pages,omitempty"`
-	NumberItems    *int        `json:"items,omitempty"`
+	Type    string      `json:"type,omitempty"` //error-response, success-response
+	Message string      `json:"message,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+type PageResponse struct {
+	Response
+	Page             int64 `json:"page"`
+	PerPage          int64 `json:"perPage"`
+	TotalPages       int64 `json:"totalPages"`
+	TotalItemsOnData int64 `json:"totalItems"`
 }
 
 const success_response = "success"
 const error_message = "error-message"
 
-const SUCCESS = "Operación completada exitosamente."
-const CREATED = "Registro guardado con éxito."
-const DELETED = "Registro eliminado correctamente."
-const UPDATED = "Registro actualizado con éxito."
+const SUCCESS = "Operación completada exitosamente"
+const CREATED = "Registro guardado con éxito"
+const DELETED = "Registro eliminado correctamente"
+const UPDATED = "Registro actualizado con éxito"
 
 func Ok(c Target, payload interface{}) error {
 	return c.JSON(http.StatusOK, &Response{
@@ -68,11 +71,11 @@ func unwrap(err error) (code int, message string) {
 	}
 	go func(err error, we *errs.Err) {
 		if we == nil && err != nil {
-			log.Println("ERR:", err.Error())
+			slog.Error("internal error", "error", err)
 			return
 		}
 		if we.Wrapped() != nil {
-			log.Println("ERR:", strings.TrimSpace(we.Wrapped().Error()))
+			slog.Error("internal error", "error", we.Wrapped())
 			return
 		}
 	}(err, werr)
@@ -98,9 +101,34 @@ func Auto(c Target, err error) error {
 	}
 	return Success(c)
 }
+
 func AutoOK(c Target, data, err error) error {
 	if err != nil {
 		return Err(c, err)
 	}
 	return Ok(c, data)
+}
+
+// page: current page
+// perPage: number of items per page
+// totalItems: total items on the data source
+func OKPage(c Target, page int64, perPage int64, totalItems int64, data any) error {
+	return c.JSON(http.StatusOK, &PageResponse{
+		Response:         Response{Type: success_response, Data: data},
+		Page:             page,
+		PerPage:          perPage,
+		TotalItemsOnData: TotalItems(data),
+		TotalPages:       totalItems / perPage,
+	})
+}
+
+// if the data is an array, return the number of elements
+// otherwise, return 1
+func TotalItems(data any) int64 {
+	switch v := data.(type) {
+	case []any:
+		return int64(len(v))
+	default:
+		return 1
+	}
 }
