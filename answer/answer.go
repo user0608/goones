@@ -3,7 +3,9 @@ package answer
 import (
 	"errors"
 	"log/slog"
+	"math"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/user0608/goones/errs"
@@ -118,17 +120,21 @@ func OKPage(c Target, page int64, perPage int64, totalItems int64, data any) err
 		Page:             page,
 		PerPage:          perPage,
 		TotalItemsOnData: TotalItems(data),
-		TotalPages:       totalItems / perPage,
+		TotalPages:       int64(math.Ceil(float64(totalItems) / float64(perPage))),
 	})
 }
 
 // if the data is an array, return the number of elements
 // otherwise, return 1
 func TotalItems(data any) int64 {
-	switch v := data.(type) {
-	case []any:
-		return int64(len(v))
-	default:
-		return 1
+	typeOf := reflect.TypeOf(data)
+	var kind reflect.Kind
+	kind = typeOf.Kind()
+	if kind == reflect.Pointer {
+		kind = typeOf.Elem().Kind()
 	}
+	if kind == reflect.Slice {
+		return int64(reflect.ValueOf(data).Len())
+	}
+	return 1
 }
