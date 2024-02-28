@@ -13,7 +13,7 @@ var TAG = "chk"
 
 var ErrorKCHECK = errors.New("error unexpected, kcheck")
 var mutex sync.RWMutex
-var funcs = MapFuncs{
+var tagFuncs = MapFuncs{
 	"uuid":    uuidv4Func,
 	"nonil":   noNilFunc,
 	"nosp":    noSpacesStartAndEnd,
@@ -63,10 +63,17 @@ func (ex *paramExtractor) GetTagValue(fieldName string) (value string, ok bool) 
 }
 
 func AddFunc(tagKey string, f ValidFunc) {
-	mutex.RLock()
-	funcs[tagKey] = f
-	mutex.RUnlock()
+	mutex.Lock()
+	tagFuncs[tagKey] = f
+	mutex.Lock()
 }
+func getFunc(tagKey string) (ValidFunc, bool) {
+	mutex.RLock()
+	f, ok := tagFuncs[tagKey]
+	mutex.RUnlock()
+	return f, ok
+}
+
 func (of *Fields) isContain(field string) bool {
 	for _, v := range *of {
 		if v == field {
@@ -136,14 +143,14 @@ func ValidTarget(tags string, atom Atom) error {
 	tags = StandardSpace(tags)
 	keys := strings.Split(tags, " ")
 	for _, key := range keys {
-		if f, ok := funcs[key]; ok {
+		if f, ok := getFunc(key); ok {
 			if err := f(atom, ""); err != nil {
 				return err
 			}
 		} else {
 			valid, fkey, keyValues := SplitKeyValue(key)
 			if valid {
-				if ff, okk := funcs[fkey]; okk {
+				if ff, okk := getFunc(fkey); okk {
 					if err := ff(atom, keyValues); err != nil {
 						return err
 					}
