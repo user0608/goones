@@ -22,10 +22,16 @@ type Response struct {
 
 type PageResponse struct {
 	Response
-	Page             int64 `json:"page"`
-	PerPage          int64 `json:"perPage"`
-	TotalPages       int64 `json:"totalPages"`
-	TotalItemsOnData int64 `json:"totalItems"`
+	// Page: current page
+	Page int64 `json:"page"`
+	// PerPage: number of items per page
+	PerPage int64 `json:"perPage"`
+	// TotalPages: total pages
+	TotalPages int64 `json:"totalPages"`
+	// TotalItems: total items on the data source
+	TotalItems int64 `json:"totalItems"`
+	// Items: number of items on the current page
+	Items int64 `json:"items"`
 }
 
 const success_response = "success"
@@ -116,11 +122,12 @@ func AutoOK(c Target, data, err error) error {
 // totalItems: total items on the data source
 func OKPage(c Target, page int64, perPage int64, totalItems int64, data any) error {
 	return c.JSON(http.StatusOK, &PageResponse{
-		Response:         Response{Type: success_response, Data: data},
-		Page:             page,
-		PerPage:          perPage,
-		TotalItemsOnData: TotalItems(data),
-		TotalPages:       int64(math.Ceil(float64(totalItems) / float64(perPage))),
+		Response:   Response{Type: success_response, Data: data},
+		Page:       page,
+		PerPage:    perPage,
+		TotalItems: totalItems,
+		Items:      TotalItems(data),
+		TotalPages: int64(math.Ceil(float64(totalItems) / float64(perPage))),
 	})
 }
 
