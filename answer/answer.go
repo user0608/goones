@@ -20,20 +20,6 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-type PageResponse struct {
-	Response
-	// Page: current page
-	Page int64 `json:"page"`
-	// PerPage: number of items per page
-	PerPage int64 `json:"perPage"`
-	// TotalPages: total pages
-	TotalPages int64 `json:"totalPages"`
-	// TotalItems: total items on the data source
-	TotalItems int64 `json:"totalItems"`
-	// Items: number of items on the current page
-	Items int64 `json:"items"`
-}
-
 const success_response = "success"
 const error_message = "error-message"
 
@@ -117,6 +103,20 @@ func AutoOK(c Target, data, err error) error {
 	return Ok(c, data)
 }
 
+type PageResponse struct {
+	Response
+	// Page: current page
+	Page int64 `json:"page"`
+	// PerPage: number of items per page
+	PerPage int64 `json:"perPage"`
+	// TotalPages: total pages
+	TotalPages int64 `json:"totalPages"`
+	// TotalItems: total items on the data source
+	TotalItems int64 `json:"totalItems"`
+	// Items: number of items on the current page
+	Items int64 `json:"items"`
+}
+
 // page: current page
 // perPage: number of items per page
 // totalItems: total items on the data source
@@ -128,6 +128,28 @@ func OKPage(c Target, page int64, perPage int64, totalItems int64, data any) err
 		TotalItems: totalItems,
 		Items:      TotalItems(data),
 		TotalPages: int64(math.Ceil(float64(totalItems) / float64(perPage))),
+	})
+}
+
+type LimitOffsetResponse struct {
+	Response
+	// Limit: number of items per page
+	Limit int64 `json:"limit"`
+	// Offset: number of items to skip
+	Offset int64 `json:"offset"`
+	// TotalItems: total items on the data source
+	TotalItems int64 `json:"totalItems"`
+	// Items: number of items on the current page
+	Items int64 `json:"items"`
+}
+
+func OKLimitOffset(c Target, limit int64, offset int64, totalItems int64, data any) error {
+	return c.JSON(http.StatusOK, &LimitOffsetResponse{
+		Response:   Response{Type: success_response, Data: data},
+		Limit:      limit,
+		Offset:     offset,
+		TotalItems: totalItems,
+		Items:      TotalItems(data),
 	})
 }
 
