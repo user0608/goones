@@ -2,7 +2,7 @@ package kcheck
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,7 +15,7 @@ func uuidv4Func(atom Atom, _ string) error {
 	const rgx = "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 	valid, err := regexp.MatchString(rgx, atom.Value)
 	if err != nil {
-		log.Printf("ERROR: kcheck.uuidv4Func: %v\n", err)
+		slog.Warn("kcheck.uuidv4Func", "error", err)
 		return ErrorKCHECK
 	}
 	if valid {
@@ -26,7 +26,7 @@ func uuidv4Func(atom Atom, _ string) error {
 func numberFunc(atom Atom, _ string) error {
 	valid, err := regexp.MatchString("^[0-9]+$", atom.Value)
 	if err != nil {
-		log.Printf("ERROR: kcheck.numberFunc: %v\n", err)
+		slog.Warn("kcheck.numberFunc", "error", err)
 		return ErrorKCHECK
 	}
 	if valid {
@@ -38,7 +38,7 @@ func numberFunc(atom Atom, _ string) error {
 func decimalFunc(atom Atom, _ string) error {
 	valid, err := regexp.MatchString("^[0-9]+.[0-9]+$", atom.Value)
 	if err != nil {
-		log.Printf("ERROR: kcheck.Number: %v\n", err)
+		slog.Warn("kcheck.decimalFunc", "error", err)
 		return ErrorKCHECK
 	}
 	if valid {
@@ -50,7 +50,7 @@ func decimalFunc(atom Atom, _ string) error {
 func sword(atom Atom, _ string) error {
 	valid, err := regexp.MatchString("^[A-Za-z0-9_]*$", atom.Value)
 	if err != nil {
-		log.Printf("ERROR: kcheck.sword: %v\n", err)
+		slog.Warn("kcheck.sword", "error", err)
 		return ErrorKCHECK
 	}
 	if valid {
@@ -65,7 +65,7 @@ func sword(atom Atom, _ string) error {
 func calLens(value string, slen string) (int, int, error) {
 	lenght, err := strconv.Atoi(slen)
 	if err != nil {
-		log.Printf("ERROR: kcheck.calLens: %v\n", err)
+		slog.Warn("kcheck.calLens", "error", err)
 		return 0, 0, ErrorKCHECK
 	}
 	valueLenght := len(value)
@@ -117,7 +117,7 @@ func sTextFunc(atom Atom, args string) error {
 func emailFunc(atom Atom, _ string) error {
 	match, err := regexp.MatchString(`^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$`, atom.Value)
 	if err != nil {
-		log.Printf("ERROR: kcheck.emailFunc: %v\n", err)
+		slog.Warn("kcheck.emailFunc", "error", err)
 		return ErrorKCHECK
 	}
 	if !match {
@@ -130,7 +130,7 @@ func emailFunc(atom Atom, _ string) error {
 func lenghtFunc(atom Atom, args string) error {
 	vLen, valueLenght, err := calLens(atom.Value, args)
 	if err != nil {
-		log.Printf("ERROR: kcheck.lenghtFunc field:`%s` args:`%s`: %v\n", atom.Name, args, err)
+		slog.Warn("kcheck.lenghtFunc", "error", err, "field", atom.Name, "args", args)
 		return err
 	}
 	if valueLenght == vLen {
@@ -142,7 +142,7 @@ func lenghtFunc(atom Atom, args string) error {
 func maxLenghtFunc(atom Atom, args string) error {
 	maxLen, valueLenght, err := calLens(atom.Value, args)
 	if err != nil {
-		log.Printf("ERROR: kcheck.maxLenghtFunc field:`%s` args:`%s`: %v\n", atom.Name, args, err)
+		slog.Warn("kcheck.maxLenghtFunc", "error", err, "field", atom.Name, "args", args)
 		return err
 	}
 	if valueLenght <= maxLen {
@@ -154,7 +154,7 @@ func maxLenghtFunc(atom Atom, args string) error {
 func minLenghtFunc(atom Atom, args string) error {
 	minLen, valueLenght, err := calLens(atom.Value, args)
 	if err != nil {
-		log.Printf("ERROR: kcheck.minLenghtFunc field:[%s] args:[%s]: %v\n", atom.Name, args, err)
+		slog.Warn("kcheck.minLenghtFunc", "error", err, "field", atom.Name, "args", args)
 		return err
 	}
 	if valueLenght >= minLen {
@@ -166,7 +166,7 @@ func minLenghtFunc(atom Atom, args string) error {
 func regularExpression(atom Atom, args string) error {
 	valid, err := regexp.MatchString(args, atom.Value)
 	if err != nil {
-		log.Printf("ERROR: kcheck.regularExpression: [%v], en el campo [%s] con expresión [%s]\n", err, atom.Name, args)
+		slog.Warn("kcheck.regularExpression", "error", err, "field", atom.Name, "args", args)
 		return ErrorKCHECK
 	}
 	if valid {

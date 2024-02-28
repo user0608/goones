@@ -2,7 +2,8 @@ package kcheck
 
 import (
 	"errors"
-	"log"
+
+	"log/slog"
 	"reflect"
 	"strings"
 	"sync"
@@ -85,7 +86,7 @@ func reflectValueAndType(i interface{}) (*reflect.Value, *reflect.Type, error) {
 	var rValue reflect.Value
 	rType := reflect.TypeOf(i)
 	if rType == nil {
-		log.Println("ERROR: nil value was received")
+		slog.Warn("kcheck: nil value was received")
 		return nil, nil, ErrorKCHECK
 	}
 	switch rType.Kind() {
@@ -96,12 +97,13 @@ func reflectValueAndType(i interface{}) (*reflect.Value, *reflect.Type, error) {
 			rValue = reflect.ValueOf(i).Elem()
 			rType = rType.Elem()
 		} else {
-			log.Printf("ERROR: a structure was type expected, invalid type `%v`\n", rType)
+			slog.Warn("kcheck: invalid type", "type", rType)
 			return nil, nil, ErrorKCHECK
 		}
 	}
 	return &rValue, &rType, nil
 }
+
 func valid(i interface{}, filds Fields, isOmit bool) error {
 	rValue, rType, err := reflectValueAndType(i)
 	if err != nil {
@@ -146,17 +148,18 @@ func ValidTarget(tags string, atom Atom) error {
 						return err
 					}
 				} else {
-					log.Printf("ERROR: tag value `%s` invalid in `%s` field\n", key, atom.Name)
+					slog.Warn("kcheck: tag value invalid", "tag", key, "field", atom.Name)
 					return ErrorKCHECK
 				}
 			} else {
-				log.Printf("ERROR: tag value `%s` invalid in `%s` field\n", key, atom.Name)
+				slog.Warn("kcheck: tag value invalid", "tag", key, "field", atom.Name)
 				return ErrorKCHECK
 			}
 		}
 	}
 	return nil
 }
+
 func BuildTagParamExtractor(i interface{}) (TagParamExtractor, error) {
 	rValue, rType, err := reflectValueAndType(i)
 	if err != nil {

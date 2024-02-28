@@ -1,7 +1,7 @@
 package kcheck
 
 import (
-	"log"
+	"log/slog"
 	"regexp"
 	"strings"
 )
@@ -28,7 +28,7 @@ func StandardSpace(s string) string {
 func SplitKeyValue(s string) (bool, string, string) {
 	ok, err := regexp.MatchString("^[a-zA-Z]+=(.)+$", s)
 	if err != nil {
-		log.Println("ERROR:", err)
+		slog.Warn("kcheck.SplitKeyValue", "error", err)
 		return false, "", ""
 	}
 	if !ok {
