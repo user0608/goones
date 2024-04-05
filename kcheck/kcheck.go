@@ -14,18 +14,22 @@ var TAG = "chk"
 var ErrorKCHECK = errors.New("error unexpected, kcheck")
 var mutex sync.RWMutex
 var tagFuncs = MapFuncs{
-	"uuid":    uuidv4Func,
-	"nonil":   noNilFunc,
-	"nosp":    noSpacesStartAndEnd,
-	"sword":   sword,
-	"stxt":    sTextFunc,
-	"email":   emailFunc,
-	"num":     numberFunc,
-	"decimal": decimalFunc,
-	"len":     lenghtFunc,
-	"max":     maxLenghtFunc,
-	"min":     minLenghtFunc,
-	"rgx":     regularExpression,
+	"uuid":     uuidv4Func,
+	"nonil":    noNilFunc,
+	"nosp":     noSpacesStartAndEnd,
+	"sword":    sword,
+	"stxt":     sTextFunc,
+	"email":    emailFunc,
+	"num":      numberFunc,
+	"decimal":  decimalFunc,
+	"len":      lenghtFunc,
+	"max":      maxLenghtFunc,
+	"min":      minLenghtFunc,
+	"rgx":      regularExpression,
+	"ip":       ipv4Func,
+	"date":     dateFunc,
+	"time":     timeFunc,
+	"datetime": dateTimeFunc,
 }
 
 // OmitFields lista de campos que no se tomaran en cuanta al realizar la verificación
@@ -42,25 +46,6 @@ como segundo parámetro en formato string.
 Nota: importante que el registro de nuevas funciona no se haga en tiempo de ejecución,
 esto podría generar problemas de acceso por parte de las gorutines
 */
-type TagParamExtractor interface {
-	GetTagValue(fieldName string) (value string, ok bool)
-}
-type paramExtractor struct {
-	rValue reflect.Value
-	rType  reflect.Type
-}
-
-func (ex *paramExtractor) GetTagValue(fieldName string) (value string, ok bool) {
-	rsf, found := ex.rType.FieldByName(fieldName)
-	if !found {
-		return
-	}
-	if rsf.Type.Kind() == reflect.String {
-		value = rsf.Tag.Get(TAG)
-		ok = true
-	}
-	return
-}
 
 func AddFunc(tagKey string, f ValidFunc) {
 	mutex.Lock()
@@ -112,6 +97,7 @@ func reflectValueAndType(i interface{}) (*reflect.Value, *reflect.Type, error) {
 }
 
 func valid(i interface{}, filds Fields, isOmit bool) error {
+	var errors CollectionError
 	rValue, rType, err := reflectValueAndType(i)
 	if err != nil {
 		return err
@@ -130,13 +116,17 @@ func valid(i interface{}, filds Fields, isOmit bool) error {
 					continue
 				}
 			}
-			atom := Atom{Name: SplitCamelCase(rsf.Name), Value: rv.String()}
+			var fileName = strings.Split(rsf.Tag.Get("json"), ",")[0]
+			if fileName == "" {
+				fileName = rsf.Name
+			}
+			atom := Atom{Name: fileName, Value: rv.String()}
 			if err := ValidTarget(tagValues, atom); err != nil {
-				return err
+				errors.AppendError(err)
 			}
 		}
 	}
-	return nil
+	return errors.GetErr()
 }
 
 func ValidTarget(tags string, atom Atom) error {
@@ -165,12 +155,4 @@ func ValidTarget(tags string, atom Atom) error {
 		}
 	}
 	return nil
-}
-
-func BuildTagParamExtractor(i interface{}) (TagParamExtractor, error) {
-	rValue, rType, err := reflectValueAndType(i)
-	if err != nil {
-		return nil, err
-	}
-	return &paramExtractor{rValue: *rValue, rType: *rType}, nil
 }

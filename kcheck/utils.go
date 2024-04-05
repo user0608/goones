@@ -6,16 +6,8 @@ import (
 	"strings"
 )
 
-// SplitCamelCase recibe un texto camelcase y lo separa por espacios
-func SplitCamelCase(s string) string {
-	for _, reStr := range []string{`([A-Z]+)([A-Z][a-z])`, `([a-z\d])([A-Z])`} {
-		re := regexp.MustCompile(reStr)
-		s = re.ReplaceAllString(s, "${1} ${2}")
-	}
-	return s
-}
-
-// StandardSpace elimina los espacios innecesarios entre palabras
+// StandardSpace elimina los espacios innecesarios entre palabras en una cadena de texto,
+// dejando solamente un espacio entre cada palabra.
 func StandardSpace(s string) string {
 	for strings.Contains(s, "  ") {
 		s = strings.ReplaceAll(s, "  ", " ")
