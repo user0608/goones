@@ -47,7 +47,7 @@ func Updated(c Target) error { return c.JSON(http.StatusOK, &Response{Message: U
 
 func Deleted(c Target) error { return c.JSON(http.StatusOK, &Response{Message: DELETED}) }
 
-func unwrap(err error) (code int, message string) {
+func UnwrapErr(err error) (code int, message string) {
 	var werr *errs.Err
 	code = http.StatusInternalServerError
 	message = "Ocurrió un problema. Se produjo un error inesperado."
@@ -77,7 +77,7 @@ func unwrap(err error) (code int, message string) {
 }
 
 func Err(c Target, err error) error {
-	code, message := unwrap(err)
+	code, message := UnwrapErr(err)
 	return c.JSON(code, &Response{Type: error_message, Message: message})
 }
 
