@@ -36,8 +36,8 @@ func (w *defaultWriter) Write(v any) error {
 }
 
 type message struct {
-	Type string          `json:"type"`
-	Data json.RawMessage `json:"data"`
+	Type    string          `json:"type"`
+	Message json.RawMessage `json:"message"`
 }
 
 func Error(w StreamWriter, payload any) error {
@@ -53,5 +53,5 @@ func Write(w StreamWriter, messageType string, payload any) error {
 	if err != nil {
 		return err
 	}
-	return w.Write(message{Type: messageType, Data: data})
+	return w.Write(message{Type: messageType, Message: data})
 }
