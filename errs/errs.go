@@ -8,90 +8,156 @@ import (
 )
 
 type Err struct {
-	httpcode int
+	httpCode int
 	wrapped  error
 	message  string
 }
 
 func (err *Err) Error() string {
 	if err.wrapped == nil {
-		return "the errro is trivial "
+		return fmt.Sprintf("error: %s", err.message)
 	}
-	return err.wrapped.Error()
+	return fmt.Sprintf("error: %s; wrapped: %s", err.message, err.wrapped.Error())
 }
 
 func (err *Err) Message() string {
 	return err.message
 }
+
 func (err *Err) Code() int {
-	return err.httpcode
+	return err.httpCode
 }
+
 func (err *Err) Wrapped() error {
 	return err.wrapped
 }
 
-func newErrf(err error, message string, httpcode int) error {
+func newError(err error, message string, httpCode int) error {
 	return &Err{
 		wrapped:  err,
 		message:  message,
-		httpcode: httpcode,
+		httpCode: httpCode,
 	}
 }
 
-// Contains revisa el mensaje
+// ContainsMessage checks if the message exists in the wrapped error message
 func ContainsMessage(err error, message string) bool {
-	var myerr *Err
-	if errors.As(err, &myerr) {
-		return strings.Contains(myerr.message, message)
+	var customErr *Err
+	if errors.As(err, &customErr) {
+		return strings.Contains(customErr.message, message)
 	}
 	return false
 }
 
-// NewWithMessage if err isn't errs.Err, bad request is by default
+// NewWithMessage creates a new error with a custom message, defaulting to BadRequest if the error is not of type Err
 func NewWithMessage(err error, message string) error {
-	var myerr *Err
-	if errors.As(err, &myerr) {
+	var customErr *Err
+	if errors.As(err, &customErr) {
 		return &Err{
-			httpcode: myerr.httpcode,
-			wrapped:  myerr.wrapped,
+			httpCode: customErr.httpCode,
+			wrapped:  customErr.wrapped,
 			message:  message,
 		}
 	}
-	return BadReqf(err, message)
+	return newError(err, message, http.StatusBadRequest)
 }
 
-func BadReqf(err error, format string, a ...interface{}) error {
-	return newErrf(err, fmt.Sprintf(format, a...), http.StatusBadRequest)
+func BadRequestf(err error, format string, args ...interface{}) error {
+	return newError(err, fmt.Sprintf(format, args...), http.StatusBadRequest)
 }
 
-func Notfoundf(err error, format string, a ...interface{}) error {
-	return newErrf(err, fmt.Sprintf(format, a...), http.StatusForbidden)
+func NotFoundf(err error, format string, args ...interface{}) error {
+	return newError(err, fmt.Sprintf(format, args...), http.StatusNotFound)
 }
 
-func Internalf(err error, format string, a ...interface{}) error {
-	return newErrf(err, fmt.Sprintf(format, a...), http.StatusInternalServerError)
+func InternalErrorf(err error, format string, args ...interface{}) error {
+	return newError(err, fmt.Sprintf(format, args...), http.StatusInternalServerError)
 }
 
-func Unsupportedf(err error, format string, a ...interface{}) error {
-	return newErrf(err, fmt.Sprintf(format, a...), http.StatusUnsupportedMediaType)
+func UnsupportedMediaTypef(err error, format string, args ...interface{}) error {
+	return newError(err, fmt.Sprintf(format, args...), http.StatusUnsupportedMediaType)
 }
 
-func Unauthorizedf(err error, format string, a ...interface{}) error {
-	return newErrf(err, fmt.Sprintf(format, a...), http.StatusUnauthorized)
+func Unauthorizedf(err error, format string, args ...interface{}) error {
+	return newError(err, fmt.Sprintf(format, args...), http.StatusUnauthorized)
 }
 
-func Forbibbenf(err error, format string, a ...interface{}) error {
-	return newErrf(err, fmt.Sprintf(format, a...), http.StatusForbidden)
+func Forbiddenf(err error, format string, args ...interface{}) error {
+	return newError(err, fmt.Sprintf(format, args...), http.StatusForbidden)
 }
 
-func Bad(format string, a ...interface{}) error {
-	return newErrf(nil, fmt.Sprintf(format, a...), http.StatusBadRequest)
+func BadRequest(format string, args ...interface{}) error {
+	return newError(nil, fmt.Sprintf(format, args...), http.StatusBadRequest)
 }
 
-func NF(format string, a ...interface{}) error {
-	return newErrf(nil, fmt.Sprintf(format, a...), http.StatusNotFound)
+func NotFound(format string, args ...interface{}) error {
+	return newError(nil, fmt.Sprintf(format, args...), http.StatusNotFound)
 }
 
-func Internal(format string, a ...interface{}) error {
-	return newErrf(nil, fmt.Sprintf(format, a...), http.StatusInternalServerError)
+func InternalError(format string, args ...interface{}) error {
+	return newError(nil, fmt.Sprintf(format, args...), http.StatusInternalServerError)
+}
+
+// Version with direct messages (no formatting)
+func BadRequestDirect(message string) error {
+	return newError(nil, message, http.StatusBadRequest)
+}
+
+func NotFoundDirect(message string) error {
+	return newError(nil, message, http.StatusNotFound)
+}
+
+func InternalErrorDirect(message string) error {
+	return newError(nil, message, http.StatusInternalServerError)
+}
+
+func UnauthorizedDirect(message string) error {
+	return newError(nil, message, http.StatusUnauthorized)
+}
+
+func ForbiddenDirect(message string) error {
+	return newError(nil, message, http.StatusForbidden)
+}
+
+func UnsupportedMediaTypeDirect(message string) error {
+	return newError(nil, message, http.StatusUnsupportedMediaType)
+}
+
+func WrapError(err error, message string, httpCode int) error {
+	if err == nil {
+		return nil
+	}
+	return newError(err, message, httpCode)
+}
+
+func IsBadRequest(err error) bool {
+	var customErr *Err
+	if errors.As(err, &customErr) {
+		return customErr.Code() == http.StatusBadRequest
+	}
+	return false
+}
+
+func IsInternalError(err error) bool {
+	var customErr *Err
+	if errors.As(err, &customErr) {
+		return customErr.Code() == http.StatusInternalServerError
+	}
+	return false
+}
+
+func IsErr(err error) bool {
+	var customErr *Err
+	return errors.As(err, &customErr)
+}
+
+func ToSummary(err error) string {
+	if err == nil {
+		return "No error"
+	}
+	var customErr *Err
+	if errors.As(err, &customErr) {
+		return fmt.Sprintf("Error %d: %s", customErr.Code(), customErr.Message())
+	}
+	return err.Error()
 }

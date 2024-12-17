@@ -82,11 +82,11 @@ func Err(c Target, err error) error {
 }
 
 func JsonErr(c Target) error {
-	return Err(c, errs.Bad(errs.ErrInvalidRequestBody))
+	return Err(c, errs.BadRequest(errs.ErrInvalidRequestBody))
 }
 
 func QueryErr(c Target) error {
-	return Err(c, errs.Bad(errs.ErrInvalidQueryParam))
+	return Err(c, errs.BadRequest(errs.ErrInvalidQueryParam))
 }
 
 func Auto(c Target, err error) error {

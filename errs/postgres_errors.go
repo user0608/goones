@@ -91,22 +91,23 @@ func Pgf(err error) error {
 	if err == nil {
 		return nil
 	}
+
 	var pgerr *pgconn.PgError
 	if errors.As(err, &pgerr) {
 		if pgerr.Code == "23503" && strings.Contains(pgerr.Message, "insert or update") {
-			return newErrf(err, message23503, http.StatusBadRequest)
+			return newError(err, message23503, http.StatusBadRequest)
 		}
 		mutex.RLock()
 		defer mutex.RUnlock()
 		state, ok := pgErrcodes[PGCode(pgerr.Code)]
 		if ok {
 			if state.loggable || devmode == "1" {
-				return newErrf(err, state.message, state.httcode)
+				return newError(err, state.message, state.httcode)
 			}
-			return newErrf(nil, state.message, state.httcode)
+			return newError(nil, state.message, state.httcode)
 		}
 	}
-	return newErrf(err, ErrDatabase, http.StatusInternalServerError)
+	return newError(err, ErrDatabase, http.StatusInternalServerError)
 }
 
 func IsPgErrCode(err error, code PGCode) bool {
