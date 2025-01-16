@@ -4,7 +4,10 @@ go 1.21
 
 toolchain go1.23.1
 
-require github.com/jackc/pgx/v5 v5.7.1
+require (
+	github.com/google/uuid v1.6.0
+	github.com/jackc/pgx/v5 v5.7.1
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
