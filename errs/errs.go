@@ -62,39 +62,39 @@ func NewWithMessage(err error, message string) error {
 	return newError(err, message, http.StatusBadRequest)
 }
 
-func BadRequestf(err error, format string, args ...interface{}) error {
+func BadRequestError(err error, format string, args ...interface{}) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusBadRequest)
 }
 
-func NotFoundf(err error, format string, args ...interface{}) error {
+func NotFoundError(err error, format string, args ...interface{}) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusNotFound)
 }
 
-func InternalErrorf(err error, format string, args ...interface{}) error {
+func InternalError(err error, format string, args ...interface{}) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusInternalServerError)
 }
 
-func UnsupportedMediaTypef(err error, format string, args ...interface{}) error {
+func UnsupportedMediaTypeError(err error, format string, args ...interface{}) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusUnsupportedMediaType)
 }
 
-func Unauthorizedf(err error, format string, args ...interface{}) error {
+func UnauthorizedError(err error, format string, args ...interface{}) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusUnauthorized)
 }
 
-func Forbiddenf(err error, format string, args ...interface{}) error {
+func ForbiddenError(err error, format string, args ...interface{}) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusForbidden)
 }
 
-func BadRequest(format string, args ...interface{}) error {
+func BadRequestf(format string, args ...interface{}) error {
 	return newError(nil, fmt.Sprintf(format, args...), http.StatusBadRequest)
 }
 
-func NotFound(format string, args ...interface{}) error {
+func NotFoundf(format string, args ...interface{}) error {
 	return newError(nil, fmt.Sprintf(format, args...), http.StatusNotFound)
 }
 
-func InternalError(format string, args ...interface{}) error {
+func InternalErrorf(format string, args ...interface{}) error {
 	return newError(nil, fmt.Sprintf(format, args...), http.StatusInternalServerError)
 }
 

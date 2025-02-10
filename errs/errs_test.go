@@ -75,7 +75,7 @@ func TestContainsMessage(t *testing.T) {
 }
 
 func TestBadRequestf(t *testing.T) {
-	err := BadRequestf(nil, "Bad request: %s", "missing field")
+	err := BadRequestError(nil, "Bad request: %s", "missing field")
 
 	t.Run("Check error message", func(t *testing.T) {
 		if err == nil {
