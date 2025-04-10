@@ -91,6 +91,9 @@ func Pgf(err error) error {
 	if err == nil {
 		return nil
 	}
+	if strings.Contains(err.Error(), "record not found") {
+		return newError(err, ErrRecordNotFound, http.StatusBadRequest)
+	}
 
 	var pgerr *pgconn.PgError
 	if errors.As(err, &pgerr) {
