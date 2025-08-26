@@ -42,6 +42,24 @@ func (jt DateOnly) ToTimeInLocation(loc *time.Location) time.Time {
 	return t
 }
 
+func (jt DateOnly) ToUTCDayRange(loc *time.Location) (time.Time, time.Time) {
+	day := jt.ToTimeInLocation(loc)
+	start := time.Date(
+		day.Year(),
+		day.Month(),
+		day.Day(), 0, 0, 0, 0,
+		day.Location(),
+	).UTC()
+	end := time.Date(
+		day.Year(),
+		day.Month(),
+		day.Day(), 23, 59, 59,
+		int(time.Second-time.Nanosecond),
+		day.Location(),
+	).UTC()
+	return start, end
+}
+
 var _ json.Marshaler = DateOnly{}
 
 func (do DateOnly) MarshalJSON() ([]byte, error) {

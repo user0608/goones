@@ -163,3 +163,19 @@ func TestDateOnly_ToTimeInLocation(t *testing.T) {
 
 	assert.Equal(t, expected.Format(time.RFC3339), result.Format(time.RFC3339))
 }
+
+func TestDateOnly_ToUTCDayRange(t *testing.T) {
+	loc, err := time.LoadLocation("America/Lima")
+	assert.NoError(t, err)
+
+	input := time.Date(2025, 8, 22, 0, 0, 0, 0, time.UTC)
+	dateOnly := types.NewDateOnly(input)
+
+	start, end := dateOnly.ToUTCDayRange(loc)
+
+	expectedStart := time.Date(2025, 8, 22, 0, 0, 0, 0, loc).UTC()
+	expectedEnd := time.Date(2025, 8, 22, 23, 59, 59, int(time.Second-time.Nanosecond), loc).UTC()
+
+	assert.Equal(t, expectedStart.Format(time.RFC3339Nano), start.Format(time.RFC3339Nano))
+	assert.Equal(t, expectedEnd.Format(time.RFC3339Nano), end.Format(time.RFC3339Nano))
+}
