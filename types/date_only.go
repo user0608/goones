@@ -15,6 +15,14 @@ import (
 
 type DateOnly struct{ time.Time }
 
+func NewDateOnlyFromString(value string) (DateOnly, error) {
+	var jt DateOnly
+	if err := jt.UnmarshalJSON([]byte(value)); err != nil {
+		return jt, err
+	}
+	return jt, nil
+}
+
 func NewDateOnly(t time.Time) DateOnly {
 	str := t.Format(time.DateOnly)
 	val, _ := time.Parse(time.DateOnly, str)
@@ -58,6 +66,48 @@ func (jt DateOnly) ToUTCDayRange(loc *time.Location) (time.Time, time.Time) {
 		day.Location(),
 	).UTC()
 	return start, end
+}
+
+func (jt DateOnly) StartOfDayUTC(loc *time.Location) time.Time {
+	day := jt.ToTimeInLocation(loc)
+	start := time.Date(
+		day.Year(),
+		day.Month(),
+		day.Day(),
+		0, 0, 0, 0,
+		day.Location(),
+	).UTC()
+	return start
+}
+
+func (jt DateOnly) EndOfDayUTC(loc *time.Location) time.Time {
+	day := jt.ToTimeInLocation(loc)
+	end := time.Date(
+		day.Year(),
+		day.Month(),
+		day.Day(),
+		23, 59, 59,
+		int(time.Second-time.Nanosecond),
+		day.Location(),
+	).UTC()
+	return end
+}
+
+// BuildUTCDayRange builds a UTC time range from a base date (DateOnly)
+// and two times (start and end). If the end time is earlier than the start time,
+// it is assumed to belong to the following day.
+func (jt DateOnly) BuildUTCDayRange(loc *time.Location, start, end JustTime) (time.Time, time.Time) {
+	day := jt.ToTimeInLocation(loc)
+
+	left := day.Add(time.Duration(start))
+	right := day.Add(time.Duration(end))
+
+	// if the end time is less than or equal to the start time → add one day
+	if !right.After(left) {
+		right = right.Add(24 * time.Hour)
+	}
+
+	return left.UTC(), right.UTC()
 }
 
 var _ json.Marshaler = DateOnly{}
