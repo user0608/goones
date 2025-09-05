@@ -12,6 +12,48 @@ import (
 	"github.com/user0608/goones/types"
 )
 
+func TestNewJustTimeFromString_Format(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+		wantErr  bool
+	}{
+		{`12`, "12:00:00", false},
+		{`12:30`, "12:30:00", false},
+		{`12:30:45`, "12:30:45", false},
+		{`00:00:00`, "00:00:00", false},
+		{`12:30:45.123456789`, "12:30:45.123456789", false},
+		{`23:59:59.999999999`, "23:59:59.999999999", false},
+
+		// errores
+		{`25:61:61`, "", true},
+		{`abc`, "", true},
+		{`12:30:60`, "", true},
+		{`12:60`, "", true},
+		{`-1:00:00`, "", true},
+		{`12:30:45.1000000000`, "", true},
+	}
+
+	for _, tt := range tests {
+		jt := types.JustTime(0)
+		err := jt.UnmarshalParam(tt.input)
+
+		if tt.wantErr {
+			if err == nil {
+				t.Errorf("input %s: expected error, got none (jt.String()=%s)", tt.input, jt.String())
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("input %s: unexpected error: %v (jt.String()=%s)", tt.input, err, jt.String())
+			continue
+		}
+		if got := jt.Format(); got != tt.expected {
+			t.Errorf("input %s: expected %s, got %s (jt.String()=%s)", tt.input, tt.expected, got, jt.String())
+		}
+	}
+}
+
 func TestJustTime_Scan(t *testing.T) {
 	tests := []struct {
 		name     string

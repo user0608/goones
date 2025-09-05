@@ -13,6 +13,14 @@ import (
 
 type JustTime time.Duration
 
+func NewJustTimeFromString(value string) (JustTime, error) {
+	var jt JustTime
+	if err := jt.UnmarshalJSON([]byte(value)); err != nil {
+		return jt, err
+	}
+	return jt, nil
+}
+
 func NewJustTime(t time.Time) JustTime {
 	return JustTime(
 		time.Duration(t.Hour())*time.Hour +
@@ -67,14 +75,41 @@ func (jt *JustTime) UnmarshalJSON(data []byte) error {
 
 func (jt *JustTime) UnmarshalParam(value string) error {
 	var h, m, s, n int
-	_, err := fmt.Sscanf(value, "%02d:%02d:%02d.%09d", &h, &m, &s, &n)
-	if err != nil {
-		n = 0
-		_, err = fmt.Sscanf(value, "%02d:%02d:%02d", &h, &m, &s)
+	var parsed bool
+
+	switch {
+	case strings.Count(value, ":") == 2 && strings.Contains(value, "."):
+		_, err := fmt.Sscanf(value, "%d:%d:%d.%d", &h, &m, &s, &n)
+		if err == nil {
+			parsed = true
+		}
+	case strings.Count(value, ":") == 2:
+		_, err := fmt.Sscanf(value, "%d:%d:%d", &h, &m, &s)
+		if err == nil {
+			parsed = true
+		}
+	case strings.Count(value, ":") == 1:
+		_, err := fmt.Sscanf(value, "%d:%d", &h, &m)
+		if err == nil {
+			s = 0
+			parsed = true
+		}
+	case strings.Count(value, ":") == 0:
+		_, err := fmt.Sscanf(value, "%d", &h)
+		if err == nil {
+			m, s = 0, 0
+			parsed = true
+		}
 	}
-	if err != nil {
-		return fmt.Errorf("JustTime: error al parsear `%s`: %w", value, err)
+
+	if !parsed {
+		return fmt.Errorf("JustTime: formato inválido `%s`", value)
 	}
+
+	if h < 0 || h > 23 || m < 0 || m > 59 || s < 0 || s > 59 || n < 0 || n > 999999999 {
+		return fmt.Errorf("JustTime: fuera de rango `%s` (h=%d m=%d s=%d n=%d)", value, h, m, s, n)
+	}
+
 	*jt = JustTime(
 		time.Duration(h)*time.Hour +
 			time.Duration(m)*time.Minute +
