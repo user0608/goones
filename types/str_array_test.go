@@ -1,92 +1,161 @@
 package types
 
 import (
-	"reflect"
+	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStrArray_UnmarshalJSON(t *testing.T) {
-	type args struct {
-		data []byte
-	}
 	tests := []struct {
 		name    string
-		sa      *StrArray
-		args    args
+		input   string
 		want    StrArray
 		wantErr bool
 	}{
 		{
-			name: "simple string",
-			args: args{
-				data: []byte(`"test string"`),
-			},
-			sa:   &StrArray{},
-			want: StrArray([]string{"test string"}),
+			name:  "single string",
+			input: `"test string"`,
+			want:  StrArray{"test string"},
 		},
 		{
-			name: "array string",
-			args: args{
-				data: []byte(`["test1","test2"]`),
-			},
-			sa:   &StrArray{},
-			want: StrArray([]string{"test1", "test2"}),
+			name:  "string array",
+			input: `["test1","test2"]`,
+			want:  StrArray{"test1", "test2"},
 		},
 		{
-			name: "null array",
-			args: args{
-				data: []byte(`null`),
-			},
-			sa:   &StrArray{},
-			want: StrArray([]string{}),
+			name:  "null",
+			input: `null`,
+			want:  StrArray{},
 		},
 		{
-			name: "empty array",
-			args: args{
-				data: []byte(`[]`),
-			},
-			sa:   &StrArray{},
-			want: StrArray([]string{}),
+			name:  "empty array",
+			input: `[]`,
+			want:  StrArray{},
 		},
 		{
-			name: "empty obj",
-			args: args{
-				data: []byte(`{}`),
-			},
-			sa:      &StrArray{},
-			want:    StrArray([]string{}),
+			name:    "invalid object",
+			input:   `{}`,
 			wantErr: true,
 		},
 		{
-			name: "unsopported type",
-			args: args{
-				data: []byte(`[1,2,3]`),
-			},
-			sa:      &StrArray{},
-			want:    StrArray([]string{}),
+			name:    "non string array",
+			input:   `[1,2,3]`,
 			wantErr: true,
 		},
 		{
-			name: "invalid JSON",
-			args: args{
-				data: []byte(`- [1,2,3]`),
-			},
-			sa:      &StrArray{},
-			want:    StrArray([]string{}),
+			name:    "mixed types",
+			input:   `["test",1]`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid json",
+			input:   `- [1,2,3]`,
+			wantErr: true,
+		},
+		{
+			name:    "raw invalid string",
+			input:   `hello`,
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.sa.UnmarshalJSON(tt.args.data); (err != nil) != tt.wantErr {
-				t.Errorf("StrArray.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			var sa StrArray
+			err := sa.UnmarshalJSON([]byte(tt.input))
+
 			if tt.wantErr {
+				assert.Error(t, err)
 				return
 			}
-			if !reflect.DeepEqual(tt.sa, &tt.want) {
-				t.Errorf("StrArray.UnmarshalJSON() not equal = %v, want %v", tt.sa, tt.want)
-			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, sa)
 		})
 	}
+}
+
+func TestStrArray_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   StrArray
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "nil slice",
+			input: nil,
+			want:  "null",
+		},
+		{
+			name:  "empty slice",
+			input: StrArray{},
+			want:  "[]",
+		},
+		{
+			name:  "single value",
+			input: StrArray{"a"},
+			want:  `["a"]`,
+		},
+		{
+			name:  "multiple values",
+			input: StrArray{"a", "b", "c"},
+			want:  `["a","b","c"]`,
+		},
+		{
+			name:  "with empty strings",
+			input: StrArray{"a", "", "c"},
+			want:  `["a","","c"]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := tt.input.MarshalJSON()
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, string(data))
+
+			if tt.input == nil {
+				return
+			}
+
+			var roundtrip StrArray
+			err = json.Unmarshal(data, &roundtrip)
+			require.NoError(t, err)
+			assert.Equal(t, tt.input, roundtrip)
+		})
+	}
+}
+
+func TestStrArray_Trimmed(t *testing.T) {
+	input := StrArray{" a ", "b", "  c  "}
+	expected := StrArray{"a", "b", "c"}
+
+	result := input.Trimmed()
+	assert.Equal(t, expected, result)
+}
+
+func TestStrArray_NonEmpty(t *testing.T) {
+	input := StrArray{"a", "", "b", "", "c"}
+	expected := StrArray{"a", "b", "c"}
+
+	result := input.NonEmpty()
+	assert.Equal(t, expected, result)
+}
+
+func TestStrArray_Unique(t *testing.T) {
+	input := StrArray{"a", "b", "a", "c", "b"}
+	expected := StrArray{"a", "b", "c"}
+
+	result := input.Unique()
+	assert.Equal(t, expected, result)
 }
