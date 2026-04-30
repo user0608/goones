@@ -2,157 +2,337 @@ package kcheck
 
 import (
 	"errors"
-
-	"log/slog"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 )
 
-var TAG = "chk"
+const DefaultTagName = "chk"
 
-var ErrorKCHECK = errors.New("error unexpected, kcheck")
-var mutex sync.RWMutex
-var tagFuncs = MapFuncs{
-	"uuid":     uuidv4Func,
-	"nonil":    noNilFunc,
-	"nosp":     noSpacesStartAndEnd,
-	"sword":    sword,
-	"stxt":     sTextFunc,
-	"email":    emailFunc,
-	"num":      numberFunc,
-	"decimal":  decimalFunc,
-	"len":      lenghtFunc,
-	"max":      maxLenghtFunc,
-	"min":      minLenghtFunc,
-	"rgx":      regularExpression,
-	"ip":       ipv4Func,
-	"date":     dateFunc,
-	"time":     timeFunc,
-	"datetime": dateTimeFunc,
+var ErrInvalidInput = errors.New("kcheck: invalid input")
+
+type ValidatorFunc func(Field) error
+
+type Field struct {
+	Name      string
+	Path      string
+	Tag       string
+	Param     string
+	Value     any
+	Kind      reflect.Kind
+	IsNil     bool
+	IsPointer bool
 }
 
-// OmitFields lista de campos que no se tomaran en cuanta al realizar la verificación
-type Fields []string
-
-/*
-AddFunc permite registrar una nueva función personalizada, la cual será asociada
-al tagKey indicado, si le takKey ya existe, este será remplazado, por ejemplo si
-se usa el tagKey `num` este remplaza al existente. La función ValidFunc recibe
-como primer parámetro un objeto con los datos del campo a verificar, incluye el
-nombre y el valor, y como segundo parámetro recibe el valor después del `=` del
-tagKey, por ejemplo el tag es `len` y este recibe un valor `len=10` el 10 es enviado
-como segundo parámetro en formato string.
-Nota: importante que el registro de nuevas funciona no se haga en tiempo de ejecución,
-esto podría generar problemas de acceso por parte de las gorutines
-*/
-
-func AddFunc(tagKey string, f ValidFunc) {
-	mutex.Lock()
-	tagFuncs[tagKey] = f
-	mutex.Lock()
-}
-func getFunc(tagKey string) (ValidFunc, bool) {
-	mutex.RLock()
-	f, ok := tagFuncs[tagKey]
-	mutex.RUnlock()
-	return f, ok
+type Validator struct {
+	mu    sync.RWMutex
+	tag   string
+	funcs map[string]ValidatorFunc
 }
 
-func (of *Fields) isContain(field string) bool {
-	for _, v := range *of {
-		if v == field {
+type mode int
+
+const (
+	modeSkip mode = iota
+	modeSelect
+)
+
+type options struct {
+	mode   mode
+	fields map[string]struct{}
+}
+
+func New() *Validator {
+	v := &Validator{
+		tag:   DefaultTagName,
+		funcs: make(map[string]ValidatorFunc),
+	}
+
+	v.RegisterDefaults()
+	return v
+}
+
+func (v *Validator) Register(name string, fn ValidatorFunc) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	v.funcs[name] = fn
+}
+
+func (v *Validator) get(name string) (ValidatorFunc, bool) {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	fn, ok := v.funcs[name]
+	return fn, ok
+}
+
+func (v *Validator) Struct(input any) error {
+	return v.structWithOptions(input, options{
+		mode:   modeSkip,
+		fields: map[string]struct{}{},
+	})
+}
+
+func (v *Validator) StructSkip(input any, skips ...string) error {
+	return v.structWithOptions(input, options{
+		mode:   modeSkip,
+		fields: toSet(skips),
+	})
+}
+
+func (v *Validator) StructSelect(input any, selected ...string) error {
+	return v.structWithOptions(input, options{
+		mode:   modeSelect,
+		fields: toSet(selected),
+	})
+}
+
+func (v *Validator) structWithOptions(input any, opts options) error {
+	if input == nil {
+		return ErrInvalidInput
+	}
+
+	rv := reflect.ValueOf(input)
+
+	if rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return ErrInvalidInput
+		}
+
+		rv = rv.Elem()
+	}
+
+	if rv.Kind() != reflect.Struct {
+		return ErrInvalidInput
+	}
+
+	var errs Errors
+	v.validateStruct(rv, "", opts, &errs)
+
+	return errs.Err()
+}
+
+func (v *Validator) validateStruct(rv reflect.Value, parentPath string, opts options, errs *Errors) {
+	rt := rv.Type()
+
+	for i := 0; i < rv.NumField(); i++ {
+		sf := rt.Field(i)
+		fv := rv.Field(i)
+
+		if sf.PkgPath != "" {
+			continue
+		}
+
+		fieldName := sf.Name
+
+		path := fieldName
+		if parentPath != "" {
+			path = parentPath + "." + fieldName
+		}
+
+		ignored := shouldIgnore(fieldName, path, opts)
+
+		if ignored && !shouldDiveForSelectedPath(path, opts) {
+			continue
+		}
+
+		tag := sf.Tag.Get(v.tag)
+		if tag == "-" {
+			continue
+		}
+
+		if shouldDive(fv) {
+			v.validateStruct(indirectValue(fv), path, opts, errs)
+		}
+
+		if ignored {
+			continue
+		}
+
+		if tag == "" {
+			continue
+		}
+
+		field := buildField(path, fieldName, fv)
+
+		for _, rule := range parseRules(tag) {
+			field.Tag = rule.Name
+			field.Param = rule.Param
+
+			fn, ok := v.get(rule.Name)
+			if !ok {
+				errs.Add(path, fmt.Sprintf("validador [%s] no registrado", rule.Name))
+				continue
+			}
+
+			if err := fn(field); err != nil {
+				errs.Add(path, err.Error())
+			}
+		}
+	}
+}
+
+func shouldIgnore(fieldName string, path string, opts options) bool {
+	switch opts.mode {
+	case modeSkip:
+		return inSet(opts.fields, fieldName) || inSet(opts.fields, path)
+
+	case modeSelect:
+		return !inSet(opts.fields, fieldName) && !inSet(opts.fields, path)
+
+	default:
+		return false
+	}
+}
+
+func shouldDiveForSelectedPath(path string, opts options) bool {
+	if opts.mode != modeSelect {
+		return false
+	}
+
+	prefix := path + "."
+
+	for selected := range opts.fields {
+		if strings.HasPrefix(selected, prefix) {
 			return true
 		}
 	}
+
 	return false
 }
 
-func Valid(i interface{}, skips ...string) error {
-	return valid(i, skips, true)
-}
-func ValidSelect(i interface{}, selecteds ...string) error {
-	return valid(i, selecteds, false)
-}
-func reflectValueAndType(i interface{}) (*reflect.Value, *reflect.Type, error) {
-	var rValue reflect.Value
-	rType := reflect.TypeOf(i)
-	if rType == nil {
-		slog.Warn("kcheck: nil value was received")
-		return nil, nil, ErrorKCHECK
-	}
-	switch rType.Kind() {
-	case reflect.Struct:
-		rValue = reflect.ValueOf(i)
-	case reflect.Ptr:
-		if rType.Elem().Kind() == reflect.Struct {
-			rValue = reflect.ValueOf(i).Elem()
-			rType = rType.Elem()
-		} else {
-			slog.Warn("kcheck: invalid type", "type", rType)
-			return nil, nil, ErrorKCHECK
+func toSet(values []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(values))
+
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
 		}
+
+		set[value] = struct{}{}
 	}
-	return &rValue, &rType, nil
+
+	return set
 }
 
-func valid(i interface{}, filds Fields, isOmit bool) error {
-	var errors CollectionError
-	rValue, rType, err := reflectValueAndType(i)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < (*rType).NumField(); i++ {
-		rsf := (*rType).Field(i)
-		rv := rValue.Field(i)
-		if rsf.Type.Kind() == reflect.String {
-			tagValues := rsf.Tag.Get(TAG)
-			if isOmit {
-				if tagValues == "" || filds.isContain(rsf.Name) {
-					continue
-				}
-			} else {
-				if !filds.isContain(rsf.Name) {
-					continue
-				}
-			}
-			var fileName = strings.Split(rsf.Tag.Get("json"), ",")[0]
-			if fileName == "" {
-				fileName = rsf.Name
-			}
-			atom := Atom{Name: fileName, Value: rv.String()}
-			if err := ValidTarget(tagValues, atom); err != nil {
-				errors.AppendError(err)
-			}
-		}
-	}
-	return errors.GetErr()
+func inSet(set map[string]struct{}, value string) bool {
+	_, ok := set[value]
+	return ok
 }
 
-func ValidTarget(tags string, atom Atom) error {
-	tags = StandardSpace(tags)
-	keys := strings.Split(tags, " ")
-	for _, key := range keys {
-		if f, ok := getFunc(key); ok {
-			if err := f(atom, ""); err != nil {
-				return err
-			}
-		} else {
-			valid, fkey, keyValues := SplitKeyValue(key)
-			if valid {
-				if ff, okk := getFunc(fkey); okk {
-					if err := ff(atom, keyValues); err != nil {
-						return err
-					}
-				} else {
-					slog.Warn("kcheck: tag value invalid", "tag", key, "field", atom.Name)
-					return ErrorKCHECK
-				}
-			} else {
-				slog.Warn("kcheck: tag value invalid", "tag", key, "field", atom.Name)
-				return ErrorKCHECK
-			}
-		}
+func shouldDive(v reflect.Value) bool {
+	if !v.IsValid() {
+		return false
 	}
-	return nil
+
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return false
+		}
+
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return false
+	}
+
+	_, isTime := v.Interface().(time.Time)
+	return !isTime
+}
+
+func indirectValue(v reflect.Value) reflect.Value {
+	for v.Kind() == reflect.Pointer && !v.IsNil() {
+		v = v.Elem()
+	}
+
+	return v
+}
+
+func buildField(path string, name string, v reflect.Value) Field {
+	field := Field{
+		Name: name,
+		Path: path,
+	}
+
+	if !v.IsValid() {
+		field.IsNil = true
+		return field
+	}
+
+	field.IsPointer = v.Kind() == reflect.Pointer
+
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			field.IsNil = true
+			field.Kind = v.Kind()
+			return field
+		}
+
+		v = v.Elem()
+	}
+
+	field.Kind = v.Kind()
+
+	if v.CanInterface() {
+		field.Value = v.Interface()
+	}
+
+	return field
+}
+
+type rule struct {
+	Name  string
+	Param string
+}
+
+func parseRules(tag string) []rule {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
+		return nil
+	}
+
+	parts := strings.Fields(tag)
+	rules := make([]rule, 0, len(parts))
+
+	for _, part := range parts {
+		name, param, hasParam := strings.Cut(part, "=")
+		name = strings.TrimSpace(name)
+
+		if name == "" {
+			continue
+		}
+
+		r := rule{Name: name}
+
+		if hasParam {
+			r.Param = strings.TrimSpace(param)
+		}
+
+		rules = append(rules, r)
+	}
+
+	return rules
+}
+
+var defaultValidator = New()
+
+func Register(name string, fn ValidatorFunc) {
+	defaultValidator.Register(name, fn)
+}
+
+func Struct(input any) error {
+	return defaultValidator.Struct(input)
+}
+
+func Valid(i any, skips ...string) error {
+	return defaultValidator.StructSkip(i, skips...)
+}
+
+func ValidSelect(i any, selected ...string) error {
+	return defaultValidator.StructSelect(i, selected...)
 }

@@ -12,12 +12,12 @@ import (
 )
 
 type Target interface {
-	JSON(code int, i interface{}) error
+	JSON(code int, i any) error
 }
 type Response struct {
-	Type    string      `json:"type,omitempty"` //error-response, success-response
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
+	Type    string `json:"type,omitempty"` //error-response, success-response
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
 }
 
 const success_response = "success"
@@ -28,7 +28,7 @@ const CREATED = "Registro guardado con éxito"
 const DELETED = "Registro eliminado correctamente"
 const UPDATED = "Registro actualizado con éxito"
 
-func Ok(c Target, payload interface{}) error {
+func Ok(c Target, payload any) error {
 	return c.JSON(http.StatusOK, &Response{
 		Type: success_response,
 		Data: payload,

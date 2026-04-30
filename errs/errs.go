@@ -33,6 +33,15 @@ func (err *Err) Wrapped() error {
 }
 
 func newError(err error, message string, httpCode int) error {
+	var e *Err
+	if errors.As(err, &e) {
+		return &Err{
+			wrapped:  e.wrapped,
+			message:  message,
+			httpCode: httpCode,
+		}
+	}
+
 	return &Err{
 		wrapped:  err,
 		message:  message,
@@ -62,39 +71,39 @@ func NewWithMessage(err error, message string) error {
 	return newError(err, message, http.StatusBadRequest)
 }
 
-func BadRequestError(err error, format string, args ...interface{}) error {
+func BadRequestError(err error, format string, args ...any) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusBadRequest)
 }
 
-func NotFoundError(err error, format string, args ...interface{}) error {
+func NotFoundError(err error, format string, args ...any) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusNotFound)
 }
 
-func InternalError(err error, format string, args ...interface{}) error {
+func InternalError(err error, format string, args ...any) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusInternalServerError)
 }
 
-func UnsupportedMediaTypeError(err error, format string, args ...interface{}) error {
+func UnsupportedMediaTypeError(err error, format string, args ...any) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusUnsupportedMediaType)
 }
 
-func UnauthorizedError(err error, format string, args ...interface{}) error {
+func UnauthorizedError(err error, format string, args ...any) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusUnauthorized)
 }
 
-func ForbiddenError(err error, format string, args ...interface{}) error {
+func ForbiddenError(err error, format string, args ...any) error {
 	return newError(err, fmt.Sprintf(format, args...), http.StatusForbidden)
 }
 
-func BadRequestf(format string, args ...interface{}) error {
+func BadRequestf(format string, args ...any) error {
 	return newError(nil, fmt.Sprintf(format, args...), http.StatusBadRequest)
 }
 
-func NotFoundf(format string, args ...interface{}) error {
+func NotFoundf(format string, args ...any) error {
 	return newError(nil, fmt.Sprintf(format, args...), http.StatusNotFound)
 }
 
-func InternalErrorf(format string, args ...interface{}) error {
+func InternalErrorf(format string, args ...any) error {
 	return newError(nil, fmt.Sprintf(format, args...), http.StatusInternalServerError)
 }
 

@@ -7,6 +7,7 @@ require (
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
+	github.com/user0608/ifdevmode v0.0.3
 )
 
 require (
